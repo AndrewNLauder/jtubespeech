@@ -8,6 +8,7 @@ from pathlib import Path
 from util import make_video_url, make_basename, vtt2txt, autovtt2txt
 import pandas as pd
 from tqdm import tqdm
+from langdetect import detect
 
 def parse_args():
   parser = argparse.ArgumentParser(
@@ -41,8 +42,20 @@ def download_video(lang, fn_sub, outdir="video", wait_sec=10, keep_org=False):
     if not fn["wav16k"].exists() or not fn["txt"].exists():
       print(videoid)
 
-      # download
+      # get title of video
       url = make_video_url(videoid)
+      title = subprocess.run(["youtube-dl", "-e", url], capture_output=True, text=True, universal_newlines=True)
+      print(title.stdout)
+      if title.stdout == "":
+        print("no title")
+        continue
+      langid = detect(title.stdout)
+      print(langid)
+      if langid != lang:
+        print("Video title is not " + lang)
+        continue
+      
+      # download
       base = fn["wav"].parent.joinpath(fn["wav"].stem)
       cp = subprocess.run(f"youtube-dl --sub-lang {lang} --extract-audio --audio-format wav --write-sub {url} -o {base}.\%\(ext\)s", shell=True,universal_newlines=True)
       if cp.returncode != 0:
