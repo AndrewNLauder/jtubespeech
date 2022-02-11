@@ -1,3 +1,5 @@
+import os
+import os.path
 import time
 import argparse
 import sys
@@ -34,6 +36,20 @@ def download_video(lang, fn_sub, outdir="video", wait_sec=10, keep_org=False):
   sub = pd.read_csv(fn_sub)
 
   for videoid in tqdm(sub[sub["sub"]==True]["videoid"]): # manual subtitle only
+    print(f"download_video: {videoid}")
+    check_dir1 = Path(outdir) / lang / "wav16k" / (make_basename(videoid))
+    print(f"check_dir1: {check_dir1}")
+    isdir1 = os.path.isdir(check_dir1)
+    check_dir2 = Path(outdir) / lang / "start" / (make_basename(videoid))
+    print(f"check_dir2: {check_dir2}")
+    isdir2 = os.path.isdir(check_dir2)
+    if isdir1:
+      print(f"videoid: {videoid} already downloaded and processed, skipping")
+      continue
+    if isdir2:
+      print(f"videoid: {videoid} tried to download but must have failed, skipping")
+      continue
+    os.makedirs(check_dir2, exist_ok=True) #### create "start" dir for all downloads, in case they fail we can skip them next run
     fn = {}
     for k in ["wav", "wav16k", "vtt", "txt"]:
       fn[k] = Path(outdir) / lang / k / (make_basename(videoid) + "." + k[:3])
@@ -45,11 +61,11 @@ def download_video(lang, fn_sub, outdir="video", wait_sec=10, keep_org=False):
       # get title of video
       url = make_video_url(videoid)
       title = subprocess.run(["youtube-dl", "-e", url], capture_output=True, text=True, universal_newlines=True)
-      print(title.stdout)
+      print(title.stdout.lower())
       if title.stdout == "":
         print("no title")
         continue
-      langid = detect(title.stdout)
+      langid = detect(title.stdout.lower())
       print(langid)
       if langid != lang:
         print("Video title is not " + lang)
@@ -93,6 +109,9 @@ def download_video(lang, fn_sub, outdir="video", wait_sec=10, keep_org=False):
       if wait_sec > 0.01:
         time.sleep(wait_sec)
 
+  print("download_video finished")
+  os.mknod('.finished') #### create .finished file
+ 
   return Path(outdir) / lang
 
 if __name__ == "__main__":
