@@ -35,7 +35,7 @@ def download_video(lang, fn_sub, outdir="video", wait_sec=10, keep_org=False):
 
   sub = pd.read_csv(fn_sub)
 
-  for videoid in tqdm(sub[sub["auto"]==True]["videoid"]): # manual subtitle only
+  for videoid in tqdm(sub[sub["sub"]==True]["videoid"]): # manual subtitle only
     print(f"download_video: {videoid}")
     check_dir1 = Path(outdir) / lang / "wav16k" / (make_basename(videoid))
     print(f"check_dir1: {check_dir1}")
@@ -73,7 +73,7 @@ def download_video(lang, fn_sub, outdir="video", wait_sec=10, keep_org=False):
       
       # download
       base = fn["wav"].parent.joinpath(fn["wav"].stem)
-      cp = subprocess.run(f"youtube-dl --sub-lang {lang} --skip-download --write-auto-sub {url} -o {base}.\%\(ext\)s", shell=True,universal_newlines=True)
+      cp = subprocess.run(f"youtube-dl --sub-lang {lang} --extract-audio --audio-format wav --write-sub {url} -o {base}.\%\(ext\)s", shell=True,universal_newlines=True)
       if cp.returncode != 0:
         print(f"Failed to download the video: url = {url}")
         continue
@@ -85,7 +85,7 @@ def download_video(lang, fn_sub, outdir="video", wait_sec=10, keep_org=False):
 
       # vtt -> txt (reformatting)
       try:
-        txt = autovtt2txt(open(fn["vtt"], "r").readlines())
+        txt = vtt2txt(open(fn["vtt"], "r").readlines())
         with open(fn["txt"], "w") as f:
           f.writelines([f"{t[0]:1.3f}\t{t[1]:1.3f}\t\"{t[2]}\"\n" for t in txt])
       except Exception as e:
